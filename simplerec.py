@@ -1,82 +1,87 @@
-import curses
-from curses import panel
+from PyInquirer import prompt, print_json
+from pprint import pprint
+
 import m3uparser
-
-class Menu():
-    def __init__(self, items, stdscreen):
-        self.window = stdscreen.subwin(0,0)
-        self.window.keypad(1)
-        self.panel = panel.new_panel(self.window)
-        self.panel.hide()
-        panel.update_panels()
-
-        self.position = 0
-        self.items = items
-        self.items.append(('exit','exit'))
-
-    def navigate(self, n):
-        self.position += n
-        if self.position < 0:
-            self.position = 0
-        elif self.position >= len(self.items):
-            self.position = len(self.items)-1
-
-    def record(self):
-        
-
-    def display(self):
-        self.panel.top()
-        self.panel.show()
-        self.window.clear()
-
-        while True:
-            self.window.refresh()
-            curses.doupdate()
-            for index, item in enumerate(self.items):
-                if index == self.position:
-                    mode = curses.A_REVERSE
-                else:
-                    mode = curses.A_NORMAL
-
-                msg = '%d. %s' % (index, item[0])
-                self.window.addstr(1+index, 1, msg, mode)
-
-            key = self.window.getch()
-
-            if key in [curses.KEY_ENTER, ord('\n')]:
-                if self.position == len(self.items)-1:
-                    break
-                else:
-                    self.items[self.position][1]()
-
-            elif key == curses.KEY_UP:
-                self.navigate(-1)
-
-            elif key == curses.KEY_DOWN:
-                self.navigate(1)
-
-        self.window.clear()
-        self.panel.hide()
-        panel.update_panels()
-        curses.doupdate()
 
 
 class RecApp():
-    def __init__(self, stdscreen):
-        mp = m3uparser.m3uParser('swero.m3u')
-        self.groups = mp.get_groups()
-        self.screen = stdscreen
-        curses.curs_set(0)
-        submenu_items = []
-        for group in self.groups:
-            submenu_items.append((group, record))
-        submenu = Menu(submenu_items, self.screen)
-        main_menu_items = [
-            ('Schedule recording', submenu.display)
-        ]
-        main_menu = Menu(main_menu_items, self.screen)
-        main_menu.display()
+    def __init__(self, file_name):
+        self.m_parser = m3uparser.m3uParser(file_name)
 
+    def get_group_choices(self):
+        ''' Get all choices for channel groups '''
+        choices = []
+        for group in self.m_parser.get_groups():
+            choices.append({'name': group})
+
+        return choices
+
+    def get_channel_choices(self, group):
+        ''' Get all choices for channels in given group '''
+        choices = []
+        for group in self.m_parser.get_channels_from_group(group):
+            choices.append({'name': group})
+
+        return choices
+
+    def get_group(self):
+        ''' Show all groups and get the user choice '''
+        questions = [
+        {
+            'type': 'list',
+            'message': 'Choose group',
+            'name': 'group',
+            'choices' : self.get_group_choices()
+        }
+        ]
+
+        answers = prompt(questions)
+        pprint(answers)
+        country = answers['group']
+        return country
+
+    def get_channel(self, group):
+        ''' Show channels from group and get user choice '''
+        questions = [
+            {
+                'type': 'list',
+                'message': 'Choose channel',
+                'name': 'channel',
+                'choices' : self.get_channel_choices(group)
+            }
+        ]
+
+        answers = prompt(questions)
+        pprint(answers)
+        channel = answers['channel']
+        return channel
+
+    def get_address_from_channel(self, channel):
+        ''' Get the stream address '''
+        return self.m_parser.get_address_from_channel(channel)
+
+    def get_time_and_duration(self):
+        ''' Get time and duration for recording '''
+        questions = [
+            {
+                'type' : 'input',
+                'name' : 'datetime',
+                'message' : 'Datetime to start recording: '
+            },
+            {
+                'type' : 'input',
+                'name' : 'duration',
+                'message' : 'Duration of recording(mins): '
+            }
+        ]
+        answers = prompt(questions)
+        datetime = answers['datetime']
+        duration = answers['duration']
+        return datetime, duration
 
 if __name__ == '__main__':
-    curses.wrapper(RecApp)
+    rec_app = RecApp('mega.m3u')
+    group = rec_app.get_group()
+    channel = rec_app.get_channel(group)
+    address = rec_app.get_address_from_channel(channel)
+    datetime, duration = rec_app.get_time_and_duration()
