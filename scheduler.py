@@ -2,41 +2,35 @@
 Schedule VLC recording for later
 '''
 import logging
+import recorder
+import time
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
 class Scheduler():
     ''' Class that schedules, starts recording and
         cleans up process after recording is done '''
-    def __init__(self, address, datetime, duration):
+    def __init__(self, address, rundate, duration):
         ''' Constructor '''
-        self.process = None
         self.logging = logging.getLogger('Scheduler')
         self.logging.setLevel(level=logging.DEBUG)
         self.address = address
-        self.datetime = datetime
+        self.rundate = rundate
         self.duration = duration
+        self.recording_started = False
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        ''' Handle cleanup of recorder '''
-        if self.process is not None:
-            self.process.terminate()
-
-    def record(self):
-        ''' Function to start the recording '''
-        self.logging.debug('Starting recording')
-        self.process = subprocess.Popen(['vlc', '--no-macosx-mediakeys', self.address,
-        '--sout="#duplicate{dst=std{access=file,mux=ts,dst=test.ts},dst=nodisplay}"',
-        '--sout-keep'])
-        self.process.wait(timeout=self.duration)
-        self.logging.debug('Recording finished')
-
-    def recorder_thread(self):
+    def _start_recorder_thread(self):
+        rec_thread = recorder.Recorder(self.address, self.duration)
+        rec_thread.start()
+        self.recording_started = True
+        rec_thread.join()
 
 
     def start_recorder(self):
         scheduler = BackgroundScheduler()
-        scheduler.add_job(self.recorder_thread, seconds=self.waittime)
+        self.logging.debug('Scheduling recording at ' + str(self.rundate) + ' seconds')
+        scheduler.add_job(self._start_recorder_thread, 'date', run_date=self.rundate)
+        scheduler.start()
+        while self.recording_started == False:
+            self.logging.debug('Waiting for scheduler')
+            time.sleep(60)

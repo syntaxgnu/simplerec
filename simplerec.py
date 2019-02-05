@@ -1,8 +1,10 @@
-from PyInquirer import prompt, print_json
+from datetime import datetime
 from pprint import pprint
 
-import m3uparser
+from PyInquirer import prompt, print_json
 
+import m3uparser
+import scheduler
 
 class RecApp():
     def __init__(self, file_name):
@@ -66,7 +68,8 @@ class RecApp():
             {
                 'type' : 'input',
                 'name' : 'datetime',
-                'message' : 'Datetime to start recording: '
+                'message' : 'Datetime to start recording: ',
+                'default' : datetime.now().strftime('%Y-%m-%d %H:%M')
             },
             {
                 'type' : 'input',
@@ -75,13 +78,15 @@ class RecApp():
             }
         ]
         answers = prompt(questions)
-        datetime = answers['datetime']
+        scheduled_datetime = datetime.strptime(answers['datetime'], '%Y-%m-%d %H:%M')
         duration = answers['duration']
-        return datetime, duration
+        return scheduled_datetime, duration
 
 if __name__ == '__main__':
     rec_app = RecApp('mega.m3u')
     group = rec_app.get_group()
     channel = rec_app.get_channel(group)
     address = rec_app.get_address_from_channel(channel)
-    datetime, duration = rec_app.get_time_and_duration()
+    rundate, duration = rec_app.get_time_and_duration()
+    rec_scheduler = scheduler.Scheduler(address, rundate, duration)
+    rec_scheduler.start_recorder()
