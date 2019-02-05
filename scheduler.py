@@ -20,7 +20,8 @@ class Scheduler():
         self.recording_started = False
 
     def _start_recorder_thread(self):
-        rec_thread = recorder.Recorder(self.address, self.duration)
+        filename = str(self.rundate) + '.mkv'
+        rec_thread = recorder.Recorder(self.address, self.duration, filename)
         rec_thread.start()
         self.recording_started = True
         rec_thread.join()
