@@ -1,2 +1,2 @@
 # simplerec
-A recorder CLI to record IPTV streams
+A simple CLI to record IPTV streams
