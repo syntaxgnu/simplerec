@@ -1,8 +1,10 @@
 ''' Main script to execute for the recorder CLI '''
 from datetime import datetime
 from pprint import pprint
-
+from pathlib import Path
 from PyInquirer import prompt
+import glob
+import logging
 
 import m3uparser
 import scheduler
@@ -84,15 +86,44 @@ def get_time_and_duration():
     duration = answers['duration']
     return scheduled_datetime, duration
 
+def locate_m3u_files():
+    ''' This function returns a list of the m3u files
+        found in working directory and users home directory '''
+    m3u_files = glob.glob('*.m3u')
+    m3u_files += glob.glob(str(Path.home()) + '/*.m3u')
+    return m3u_files
+
+def get_m3u_file():
+    ''' Get the m3u file to use '''
+    m3u_file = None
+    m3u_files = locate_m3u_files()
+    if len(m3u_files) > 0:
+        questions = [
+            {
+                'type': 'list',
+                'message': 'Choose m3u file',
+                'name': 'file',
+                'choices' : m3u_files
+            }
+        ]
+
+        answers = prompt(questions)
+        m3u_file = answers['file']
+    return m3u_file
+
 def main():
     ''' The main function that runs the show '''
-    rec_app = RecApp('mega.m3u')
-    group_to_record = rec_app.get_group()
-    channel_to_record = rec_app.get_channel(group_to_record)
-    address_to_record = rec_app.get_address_from_channel(channel_to_record)
-    record_rundate, record_duration = get_time_and_duration()
-    rec_scheduler = scheduler.Scheduler(address_to_record, record_rundate, record_duration)
-    rec_scheduler.start_recorder()
+    m3u_file = get_m3u_file()
+    if m3u_file is None:
+        logging.error('No m3u file found. Please copy an m3u file to working directory or home directory')
+    else:
+        rec_app = RecApp(m3u_file)
+        group_to_record = rec_app.get_group()
+        channel_to_record = rec_app.get_channel(group_to_record)
+        address_to_record = rec_app.get_address_from_channel(channel_to_record)
+        record_rundate, record_duration = get_time_and_duration()
+        rec_scheduler = scheduler.Scheduler(address_to_record, record_rundate, record_duration)
+        rec_scheduler.start_recorder()
 
 if __name__ == '__main__':
     main()

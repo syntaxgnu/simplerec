@@ -31,9 +31,9 @@ class Scheduler():
     def start_recorder(self):
         ''' Schedule the recorder thread for later '''
         scheduler = BackgroundScheduler()
-        self.logging.debug('Scheduling recording at %d seconds', self.rundate)
+        self.logging.debug('Scheduling recording at %s', str(self.rundate))
         scheduler.add_job(self.start_recorder_thread, 'date', run_date=self.rundate)
         scheduler.start()
-        while self.recording_started is not False:
+        while self.recording_started is False:
             self.logging.debug('Waiting for scheduler')
             time.sleep(60)
