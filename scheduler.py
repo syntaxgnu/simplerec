@@ -36,4 +36,4 @@ class Scheduler():
         scheduler.start()
         while self.recording_started is False:
             self.logging.debug('Waiting for scheduler')
-            time.sleep(60)
+            time.sleep(1800)
