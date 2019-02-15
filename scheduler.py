@@ -2,10 +2,10 @@
 Schedule VLC recording for later
 '''
 import logging
-import recorder
 import time
-
 from apscheduler.schedulers.background import BackgroundScheduler
+
+import recorder
 
 class Scheduler():
     ''' Class that schedules, starts recording and
@@ -19,7 +19,8 @@ class Scheduler():
         self.duration = duration
         self.recording_started = False
 
-    def _start_recorder_thread(self):
+    def start_recorder_thread(self):
+        ''' Method that spawn and join the recorder thread '''
         filename = str(self.rundate)
         rec_thread = recorder.Recorder(self.address, self.duration, filename)
         rec_thread.start()
@@ -28,10 +29,11 @@ class Scheduler():
 
 
     def start_recorder(self):
+        ''' Schedule the recorder thread for later '''
         scheduler = BackgroundScheduler()
-        self.logging.debug('Scheduling recording at ' + str(self.rundate) + ' seconds')
-        scheduler.add_job(self._start_recorder_thread, 'date', run_date=self.rundate)
+        self.logging.debug('Scheduling recording at %d seconds', self.rundate)
+        scheduler.add_job(self.start_recorder_thread, 'date', run_date=self.rundate)
         scheduler.start()
-        while self.recording_started == False:
+        while self.recording_started is not False:
             self.logging.debug('Waiting for scheduler')
             time.sleep(60)

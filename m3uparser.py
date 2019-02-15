@@ -3,13 +3,14 @@ import logging
 from collections import defaultdict
 
 
-class m3uParser():
+class M3uParser():
     ''' Class that parses an m3u playlist and stores it in a key value dict '''
     def __init__(self, filename):
         ''' Constructor '''
         logging.getLogger('m3uparser')
         logging.basicConfig(level=logging.INFO, format=' %(asctime)s - %(levelname)s - %(message)s')
-        self.sources = self.parse_m3u(filename)
+        self.sources = None
+        self.parse_m3u(filename)
 
     def get_groups(self):
         ''' Get the groups from m3u '''
@@ -23,24 +24,24 @@ class m3uParser():
         ''' Return channels from given group '''
         channels = []
         if group in self.sources:
-            for ch,_ in self.sources[group]:
-                channels.append(ch)
+            for channel_to_add, _ in self.sources[group]:
+                channels.append(channel_to_add)
         return channels
 
     def get_address_from_channel(self, channel):
         ''' Return address from given channel '''
         address = ''
         for group in self.sources:
-            for ch, addr in self.sources[group]:
-                if ch == channel:
+            for channel_from_group, addr in self.sources[group]:
+                if channel_from_group == channel:
                     address = addr
         return address
 
     def parse_m3u(self, filename):
         ''' parse the m3u playlist and return as dict '''
         parsed_sources = defaultdict(list)
-        with open(filename) as f:
-            all_data = f.read()
+        with open(filename) as m3u_file:
+            all_data = m3u_file.read()
             # Separate entries by splitting on EXTINF and skipping first line
             sources = all_data.split('#EXTINF')
             for source in sources[1:]:
@@ -53,12 +54,11 @@ class m3uParser():
                 for data in lines[0].split(' '):
                     if 'group-title' in data:
                         group = data.split('"')[1]
-                        logging.debug('group:  ' + str(group))
+                        logging.debug('group: %s', str(group))
                     elif 'tvg-name' in data:
                         channel_found = True
                         channel = data.split('"')[1] + ' '
-                        logging.debug('not group: ' + str(data))
-                    elif channel_found == True:
+                    elif channel_found:
                         if '"' in data:
                             channel = channel + data.split('"')[0]
                             channel_found = False
@@ -66,18 +66,13 @@ class m3uParser():
                             channel = channel + data + ' '
 
                 # Second line contains only the address
-                logging.debug('Channel: ' + str(channel))
-                logging.debug('Address: ' + str(lines[1]))
+                logging.debug('Channel: %s', str(channel))
+                logging.debug('Address: %s', str(lines[1]))
                 address = lines[1]
                 if group in parsed_sources:
                     parsed_sources[group].append((channel, address))
                 else:
                     parsed_sources[group] = [(channel, address)]
 
-        logging.info('Parsed ' + str(len(parsed_sources)) + ' groups')
-        return parsed_sources
-if __name__ == "__main__":
-    mp = m3uParser('swero.m3u')
-    groups = mp.get_groups()
-    for group in groups:
-        ch = mp.get_channels_from_group(group)
+        logging.info('Parsed %s groups', str(len(parsed_sources)))
+        self.sources = parsed_sources
