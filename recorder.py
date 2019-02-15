@@ -35,7 +35,7 @@ class Recorder(threading.Thread):
         self.process = subprocess.Popen(['ffmpeg', '-i', self.address,
                                          '-map', '0', '-sn', '-c:v',
                                          'libx264', '-c:a', 'copy',
-                                         mkv_filename])
+                                         mkv_filename], stderr=subprocess.DEVNULL)
         waittime = 60 * float(self.duration)
         self.logging.debug('Recording started, waiting for %d seconds', waittime)
         time.sleep(waittime)
@@ -48,7 +48,7 @@ class Recorder(threading.Thread):
         reencoding_pass_one = subprocess.Popen(['ffmpeg', '-y', '-i', mkv_filename,
                                                 '-c:v', 'libx264', '-b:v',
                                                 '2600k', '-pass', '1', '-an',
-                                                '-f', 'mp4', '/dev/null'])
+                                                '-f', 'mp4', '/dev/null'], stderr=subprocess.DEVNULL)
         reencoding_pass_one.wait()
 
         self.logging.debug('Starting reencoding pass 2')
@@ -56,7 +56,7 @@ class Recorder(threading.Thread):
                                                 '-c:v', 'libx264', '-b:v',
                                                 '2600k', '-pass', '2',
                                                 '-c:a', 'aac',
-                                                '-b:a', '128k', mp4_filename])
+                                                '-b:a', '128k', mp4_filename], stderr=subprocess.DEVNULL)
         reencoding_pass_two.wait()
 
         # Delete log files and the dumped stream since we now have an encoded mp4 file
